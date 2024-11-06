@@ -34,7 +34,7 @@ SELECTION-SCREEN END OF BLOCK b2.
 AT SELECTION-SCREEN OUTPUT.
   LOOP AT SCREEN INTO DATA(screen_wa).
     IF screen_wa-group1 = 'B2'.
-      screen_wa-active = p_d2.  
+      screen_wa-active = p_d2.
       MODIFY SCREEN FROM screen_wa.
     ENDIF.
   ENDLOOP.
@@ -76,7 +76,17 @@ FORM display_data .
   ULINE.
 
   LOOP AT it_attendance INTO wa_attendance.
-    WRITE : / wa_attendance-emp_id ,20 wa_attendance-att_date ,40 wa_attendance-status ,60 wa_attendance-hours_worked.
+    WRITE : / wa_attendance-emp_id ,20 wa_attendance-att_date ,40 wa_attendance-status
+     ,60 wa_attendance-hours_worked.
+
+    CASE wa_attendance-status.
+      WHEN 'P'.
+        WRITE : 80 icon_green_light AS ICON COLOR COL_POSITIVE.  " Green for Present
+      WHEN 'A'.
+        WRITE : 80 icon_red_light AS ICON COLOR COL_NEGATIVE.    " Red for Absent
+      WHEN 'L'.
+        WRITE : 80 icon_yellow_light AS ICON COLOR COL_TOTAL.    " Yellow for Leave
+    ENDCASE.
   ENDLOOP.
 
   ULINE.
