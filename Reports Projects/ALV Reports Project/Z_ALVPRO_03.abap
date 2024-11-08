@@ -17,9 +17,11 @@ DATA : it_stock  TYPE TABLE OF ty_stock,
        wa_fldcat TYPE slis_fieldcat_alv,
        it_sort   TYPE slis_t_sortinfo_alv,
        wa_sort   TYPE slis_sortinfo_alv,
-       wa_layout TYPE slis_layout_alv.
+       wa_layout TYPE slis_layout_alv,
+       it_event  TYPE slis_t_event,
+       wa_event  TYPE slis_alv_event.
 
-SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-002.
   SELECT-OPTIONS: p_id FOR zstoov-matid.
 SELECTION-SCREEN END OF BLOCK b1.
 
@@ -64,6 +66,7 @@ FORM fldcat_data .
   wa_fldcat-fieldname = 'STORLOC'.
   wa_fldcat-tabname = 'it_stock'.
   wa_fldcat-seltext_m = 'Storage Location'.
+  wa_fldcat-outputlen = 10.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'PLANT'.
@@ -74,6 +77,7 @@ FORM fldcat_data .
   wa_fldcat-fieldname = 'STOCKQ'.
   wa_fldcat-tabname = 'it_stock'.
   wa_fldcat-seltext_m = 'Stock Quantity'.
+  wa_fldcat-do_sum = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'BATCHNUM'.
@@ -100,53 +104,53 @@ FORM show_data .
 
   CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
     EXPORTING
-*     I_INTERFACE_CHECK      = ' '
-*     I_BYPASSING_BUFFER     = ' '
-*     I_BUFFER_ACTIVE        = ' '
-      i_callback_program     = sy-repid
+*     I_INTERFACE_CHECK       = ' '
+*     I_BYPASSING_BUFFER      = ' '
+*     I_BUFFER_ACTIVE         = ' '
+      i_callback_program      = sy-repid
 *     I_CALLBACK_PF_STATUS_SET          = ' '
-*     I_CALLBACK_USER_COMMAND           = ' '
-      i_callback_top_of_page = 'F_TOP_OF_PAGE'
+      i_callback_user_command = 'USER_COMMAND'
+      i_callback_top_of_page  = 'F_TOP_OF_PAGE'
 *     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
 *     I_CALLBACK_HTML_END_OF_LIST       = ' '
-*     I_STRUCTURE_NAME       =
-*     I_BACKGROUND_ID        = ' '
-*     I_GRID_TITLE           =
-*     I_GRID_SETTINGS        =
-      is_layout              = wa_layout
-      it_fieldcat            = it_fldcat
-*     IT_EXCLUDING           =
-*     IT_SPECIAL_GROUPS      =
-      it_sort                = it_sort
-*     IT_FILTER              =
-*     IS_SEL_HIDE            =
-*     I_DEFAULT              = 'X'
-*     I_SAVE                 = ' '
-*     IS_VARIANT             =
-*     IT_EVENTS              =
-*     IT_EVENT_EXIT          =
-*     IS_PRINT               =
-*     IS_REPREP_ID           =
-*     I_SCREEN_START_COLUMN  = 0
-*     I_SCREEN_START_LINE    = 0
-*     I_SCREEN_END_COLUMN    = 0
-*     I_SCREEN_END_LINE      = 0
-*     I_HTML_HEIGHT_TOP      = 0
-*     I_HTML_HEIGHT_END      = 0
-*     IT_ALV_GRAPHICS        =
-*     IT_HYPERLINK           =
-*     IT_ADD_FIELDCAT        =
-*     IT_EXCEPT_QINFO        =
+*     I_STRUCTURE_NAME        =
+*     I_BACKGROUND_ID         = ' '
+*     I_GRID_TITLE            =
+*     I_GRID_SETTINGS         =
+      is_layout               = wa_layout
+      it_fieldcat             = it_fldcat
+*     IT_EXCLUDING            =
+*     IT_SPECIAL_GROUPS       =
+      it_sort                 = it_sort
+*     IT_FILTER               =
+*     IS_SEL_HIDE             =
+*     I_DEFAULT               = 'X'
+*     I_SAVE                  = ' '
+*     IS_VARIANT              =
+*     IT_EVENTS               =
+*     IT_EVENT_EXIT           =
+*     IS_PRINT                =
+*     IS_REPREP_ID            =
+*     I_SCREEN_START_COLUMN   = 0
+*     I_SCREEN_START_LINE     = 0
+*     I_SCREEN_END_COLUMN     = 0
+*     I_SCREEN_END_LINE       = 0
+*     I_HTML_HEIGHT_TOP       = 0
+*     I_HTML_HEIGHT_END       = 0
+*     IT_ALV_GRAPHICS         =
+*     IT_HYPERLINK            =
+*     IT_ADD_FIELDCAT         =
+*     IT_EXCEPT_QINFO         =
 *     IR_SALV_FULLSCREEN_ADAPTER        =
-*     O_PREVIOUS_SRAL_HANDLER           =
+*     O_PREVIOUS_SRAL_HANDLER =
 *   IMPORTING
-*     E_EXIT_CAUSED_BY_CALLER           =
-*     ES_EXIT_CAUSED_BY_USER =
+*     E_EXIT_CAUSED_BY_CALLER =
+*     ES_EXIT_CAUSED_BY_USER  =
     TABLES
-      t_outtab               = it_stock
+      t_outtab                = it_stock
     EXCEPTIONS
-      program_error          = 1
-      OTHERS                 = 2.
+      program_error           = 1
+      OTHERS                  = 2.
   IF sy-subrc <> 0.
 * Implement suitable error handling here
   ENDIF.
@@ -196,4 +200,49 @@ FORM sort_data .
   APPEND wa_sort TO it_sort.
 
 
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form user_command
+*&---------------------------------------------------------------------*
+FORM user_command USING r_ucomm TYPE sy-ucomm
+                          r_row TYPE i.
+  DATA: lv_storloc TYPE zstoov-storloc.
+
+  CASE r_ucomm.
+    WHEN 'DETAIL'.
+      " Fetch the storage location from the selected row (r_row)
+      lv_storloc = it_stock[ r_row ]-storloc.  " Correct reference to get the selected row data
+
+      " Call the function to show batch details for the selected storage location
+      PERFORM show_batch_details USING lv_storloc.
+  ENDCASE.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form show_batch_details
+*&---------------------------------------------------------------------*
+FORM show_batch_details USING iv_storloc TYPE zstoov-storloc.
+  DATA: it_batches TYPE TABLE OF zstoov,
+        wa_batch   TYPE zstoov.
+
+  " Fetch the batch details based on the storage location
+  SELECT * FROM zstoov
+    INTO TABLE it_batches
+    WHERE storloc = iv_storloc.
+
+  " Display the batch details in a new ALV
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program = sy-repid
+      is_layout          = wa_layout
+      it_fieldcat        = it_fldcat
+    TABLES
+      t_outtab           = it_batches
+    EXCEPTIONS
+      program_error      = 1
+      OTHERS             = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
 ENDFORM.
