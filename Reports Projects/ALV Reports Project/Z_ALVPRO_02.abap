@@ -24,6 +24,8 @@ DATA: it_tstable TYPE TABLE OF ztimesheet,
       it_events  TYPE slis_t_event,
       wa_events  TYPE slis_alv_event.
 
+DATA  : wa_layout TYPE slis_layout_alv.
+
 SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
   SELECT-OPTIONS: s_id FOR ztimesheet-emplid.
 
@@ -138,31 +140,37 @@ FORM fldcat2_data .
   wa_fldcat-fieldname = 'EMPLID'.
   wa_fldcat-tabname = 'it_tstable'.
   wa_fldcat-seltext_m = 'Employee ID'.
+  wa_fldcat-edit = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'EMPLNAME'.
   wa_fldcat-tabname = 'it_tstable'.
   wa_fldcat-seltext_m = 'Employee Name'.
+  wa_fldcat-edit = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'PROJCODE'.
   wa_fldcat-tabname = 'it_tstable'.
   wa_fldcat-seltext_m = 'Project Code'.
+  wa_fldcat-edit = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'WEEKENDING'.
   wa_fldcat-tabname = 'it_tstable'.
   wa_fldcat-seltext_m = 'Week Ending'.
+  wa_fldcat-edit = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'TOTALHOURS'.
   wa_fldcat-tabname = 'it_tstable'.
   wa_fldcat-seltext_m = 'Total Hours'.
+  wa_fldcat-edit = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
   wa_fldcat-fieldname = 'STATUS'.
   wa_fldcat-tabname = 'it_tstable'.
   wa_fldcat-seltext_m = 'Status'.
+  wa_fldcat-edit = 'X'.
   APPEND wa_fldcat TO it_fldcat.
 
 ENDFORM.
@@ -179,14 +187,53 @@ FORM show2_data .
 
   CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
     EXPORTING
-      i_callback_program     = sy-repid
-      i_callback_top_of_page = 'F_TOP_OF_PAGE'
-      it_fieldcat            = it_fldcat
+*     I_INTERFACE_CHECK        = ' '
+*     I_BYPASSING_BUFFER       = ' '
+*     I_BUFFER_ACTIVE          = ' '
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'SET_PF_STATUS'
+      i_callback_user_command  = 'USER_COMMAND'
+      i_callback_top_of_page   = 'F_TOP_OF_PAGE'
+*     I_CALLBACK_HTML_TOP_OF_PAGE       = ' '
+*     I_CALLBACK_HTML_END_OF_LIST       = ' '
+*     I_STRUCTURE_NAME         =
+*     I_BACKGROUND_ID          = ' '
+*     I_GRID_TITLE             =
+*     I_GRID_SETTINGS          =
+      is_layout                = wa_layout
+      it_fieldcat              = it_fldcat
+*     IT_EXCLUDING             =
+*     IT_SPECIAL_GROUPS        =
+*     IT_SORT                  =
+*     IT_FILTER                =
+*     IS_SEL_HIDE              =
+*     I_DEFAULT                = 'X'
+*     I_SAVE                   = ' '
+*     IS_VARIANT               =
+*     IT_EVENTS                =
+*     IT_EVENT_EXIT            =
+*     IS_PRINT                 =
+*     IS_REPREP_ID             =
+*     I_SCREEN_START_COLUMN    = 0
+*     I_SCREEN_START_LINE      = 0
+*     I_SCREEN_END_COLUMN      = 0
+*     I_SCREEN_END_LINE        = 0
+*     I_HTML_HEIGHT_TOP        = 0
+*     I_HTML_HEIGHT_END        = 0
+*     IT_ALV_GRAPHICS          =
+*     IT_HYPERLINK             =
+*     IT_ADD_FIELDCAT          =
+*     IT_EXCEPT_QINFO          =
+*     IR_SALV_FULLSCREEN_ADAPTER        =
+*     O_PREVIOUS_SRAL_HANDLER  =
+* IMPORTING
+*     E_EXIT_CAUSED_BY_CALLER  =
+*     ES_EXIT_CAUSED_BY_USER   =
     TABLES
-      t_outtab               = it_tstable
+      t_outtab                 = it_tstable
     EXCEPTIONS
-      program_error          = 1
-      OTHERS                 = 2.
+      program_error            = 1
+      OTHERS                   = 2.
   IF sy-subrc <> 0.
 * Implement suitable error handling here
   ENDIF.
@@ -210,4 +257,30 @@ FORM f_top_of_page.
     EXPORTING
       it_list_commentary = it_lheader.
 
+ENDFORM.
+
+FORM user_command USING r_ucomm LIKE sy-ucomm
+                       rs_selfield TYPE slis_selfield.
+
+
+  CASE r_ucomm.
+    WHEN 'SAVE'.
+      LOOP AT it_tstable INTO wa_tstable.
+        MOVE-CORRESPONDING wa_tstable TO ztimesheet.
+        UPDATE ztimesheet.
+      ENDLOOP.
+    WHEN 'DELETE'.
+      READ TABLE it_tstable INTO wa_tstable INDEX rs_selfield-tabindex.
+      IF sy-subrc = 0.
+        DELETE it_tstable INDEX rs_selfield-tabindex.
+        DELETE FROM ztimesheet WHERE emplid = wa_tstable-emplid.
+      ENDIF.
+      rs_selfield-refresh = 'X'.
+  ENDCASE.
+
+ENDFORM.
+
+
+FORM set_pf_status USING rt_extab TYPE slis_t_extab.
+  SET PF-STATUS 'ZALV_STATUS'.
 ENDFORM.
