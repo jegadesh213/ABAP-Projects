@@ -26,6 +26,13 @@ DATA: it_tstable TYPE TABLE OF ztimesheet,
 
 DATA  : wa_layout TYPE slis_layout_alv.
 
+DATA : p_id   TYPE char3,
+       p_name TYPE char30,
+       p_code TYPE char1,
+       p_week TYPE char10,
+       p_hour TYPE char6,
+       p_stat TYPE char1.
+
 SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-001.
   SELECT-OPTIONS: s_id FOR ztimesheet-emplid.
 
@@ -269,6 +276,10 @@ FORM user_command USING r_ucomm LIKE sy-ucomm
         MOVE-CORRESPONDING wa_tstable TO ztimesheet.
         UPDATE ztimesheet.
       ENDLOOP.
+    WHEN 'REFRESH'.
+      rs_selfield-refresh = 'X'.
+      PERFORM fetch_data.
+      PERFORM show2_data.
     WHEN 'DELETE'.
       READ TABLE it_tstable INTO wa_tstable INDEX rs_selfield-tabindex.
       IF sy-subrc = 0.
@@ -276,6 +287,8 @@ FORM user_command USING r_ucomm LIKE sy-ucomm
         DELETE FROM ztimesheet WHERE emplid = wa_tstable-emplid.
       ENDIF.
       rs_selfield-refresh = 'X'.
+    WHEN 'ADD'.
+      CALL SCREEN 0300.
   ENDCASE.
 
 ENDFORM.
@@ -284,3 +297,46 @@ ENDFORM.
 FORM set_pf_status USING rt_extab TYPE slis_t_extab.
   SET PF-STATUS 'ZALV_STATUS'.
 ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*& Module STATUS_0300 OUTPUT
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+MODULE status_0300 OUTPUT.
+  SET PF-STATUS 'PF-01'.
+  SET TITLEBAR 'T-01'.
+ENDMODULE.
+
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0300  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_0300 INPUT.
+  CASE sy-ucomm.
+
+    WHEN 'BACK' OR 'EXIT' OR 'CANCEL'.
+      SET SCREEN 0.
+    WHEN 'SAVE'.
+      DATA: wa_ztimesheet TYPE ztimesheet.
+
+      wa_ztimesheet-emplid   = p_id.
+      wa_ztimesheet-emplname = p_name.
+      wa_ztimesheet-projcode = p_code.
+      wa_ztimesheet-weekending = p_week.
+      wa_ztimesheet-totalhours = p_hour.
+      wa_ztimesheet-status   = p_stat.
+
+      INSERT INTO ztimesheet VALUES wa_ztimesheet.
+
+      IF sy-subrc = 0.
+        MESSAGE 'Record added successfully' TYPE 'S'.
+      ELSE.
+        MESSAGE 'Failed to add record' TYPE 'E'.
+      ENDIF.
+
+  ENDCASE.
+ENDMODULE.
