@@ -52,8 +52,8 @@ AT LINE-SELECTION.
                     INNER JOIN sflight AS d ON a~carrid = d~carrid WHERE b~airport = wa_flt-airport .
 
       LOOP AT it_flt INTO wa_flt.
-        WRITE : / wa_flt-carrid ,20 wa_flt-airport ,40 wa_flt-cityfrom ,60 wa_flt-cityto ,80 wa_flt-fldate ,100 wa_flt-price LEFT-JUSTIFIED,120 wa_flt-currency ,
-      140 wa_flt-paymentsum LEFT-JUSTIFIED.
+        WRITE : / wa_flt-carrid ,20 wa_flt-airport COLOR 1,40 wa_flt-cityfrom ,60 wa_flt-cityto ,80 wa_flt-fldate ,100 wa_flt-price LEFT-JUSTIFIED,120 wa_flt-currency ,
+      140 wa_flt-paymentsum LEFT-JUSTIFIED HOTSPOT COLOR 3.
         HIDE :  wa_flt-carrid , wa_flt-airport , wa_flt-cityfrom , wa_flt-cityto , wa_flt-fldate , wa_flt-price , wa_flt-currency ,
       wa_flt-paymentsum .
       ENDLOOP.
@@ -65,8 +65,8 @@ AT LINE-SELECTION.
       ULINE.
 
       LOOP AT it_flt INTO wa_flt.
-        WRITE : / wa_flt-carrid ,20 wa_flt-airport ,40 wa_flt-cityfrom ,60 wa_flt-cityto ,80 wa_flt-fldate ,100 wa_flt-price LEFT-JUSTIFIED,120 wa_flt-currency ,
-      140 wa_flt-paymentsum LEFT-JUSTIFIED.
+        WRITE : / wa_flt-carrid ,20 wa_flt-airport ,40 wa_flt-cityfrom COLOR 1,60 wa_flt-cityto ,80 wa_flt-fldate ,100 wa_flt-price LEFT-JUSTIFIED,120 wa_flt-currency ,
+      140 wa_flt-paymentsum LEFT-JUSTIFIED HOTSPOT COLOR 3.
         HIDE :  wa_flt-carrid , wa_flt-airport , wa_flt-cityfrom , wa_flt-cityto , wa_flt-fldate , wa_flt-price , wa_flt-currency ,
       wa_flt-paymentsum .
       ENDLOOP.
@@ -84,7 +84,7 @@ AT LINE-SELECTION.
     ULINE.
 
     LOOP AT it_flt INTO wa_flt.
-      WRITE : / wa_flt-carrid ,20 wa_flt-airport ,40 wa_flt-paymentsum LEFT-JUSTIFIED.
+      WRITE : / wa_flt-carrid ,20 wa_flt-airport ,40 wa_flt-paymentsum LEFT-JUSTIFIED COLOR 1.
     ENDLOOP.
 
   ENDIF.
@@ -134,7 +134,7 @@ FORM show_data .
   WRITE : 'CARR ID' ,20 'AIRPORT' ,40 'FROM' ,60 'TO' ,80 'DATE' ,100 'PRICE' ,120 'CURRENCY' ,140 'PAYMENTSUM'.
   ULINE.
   LOOP AT it_flt INTO wa_flt.
-    WRITE : / wa_flt-carrid ,20 wa_flt-airport ,40 wa_flt-cityfrom ,60 wa_flt-cityto ,80 wa_flt-fldate ,100 wa_flt-price LEFT-JUSTIFIED,120 wa_flt-currency ,
+    WRITE : / wa_flt-carrid ,20 wa_flt-airport HOTSPOT COLOR 3,40 wa_flt-cityfrom HOTSPOT COLOR 3,60 wa_flt-cityto ,80 wa_flt-fldate ,100 wa_flt-price LEFT-JUSTIFIED,120 wa_flt-currency ,
     140 wa_flt-paymentsum LEFT-JUSTIFIED.
     HIDE :  wa_flt-carrid , wa_flt-airport , wa_flt-cityfrom , wa_flt-cityto , wa_flt-fldate , wa_flt-price , wa_flt-currency ,
     wa_flt-paymentsum .
