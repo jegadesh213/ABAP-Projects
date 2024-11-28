@@ -21,6 +21,10 @@ TYPES : BEGIN OF ty_cust,
 DATA : it_cust TYPE TABLE OF ty_cust,
        wa_cust TYPE ty_cust.
 
+DATA : fm_name            TYPE  rs38l_fnam,
+       control_parameters TYPE  ssfctrlop,
+       output_options     TYPE  ssfcompop.
+
 DATA : it_fldcat  TYPE lvc_t_fcat,
        wa_fldcat  TYPE lvc_s_fcat,
        it_toolbar TYPE TABLE OF stb_button,
@@ -33,7 +37,8 @@ CLASS handle_events DEFINITION.
 
   PUBLIC SECTION.
     METHODS : handle_toolbar FOR EVENT toolbar OF cl_gui_alv_grid IMPORTING e_object e_interactive,
-      handler_usercommand FOR EVENT user_command OF cl_gui_alv_grid IMPORTING e_ucomm.
+      handler_usercommand FOR EVENT user_command OF cl_gui_alv_grid IMPORTING e_ucomm,
+      handle_doubleclick FOR EVENT double_click OF cl_gui_alv_grid IMPORTING e_row.
 
 ENDCLASS.
 
@@ -85,6 +90,22 @@ CLASS handle_events IMPLEMENTATION.
 
   ENDMETHOD.
 
+
+  METHOD handle_doubleclick.
+    DATA: lv_row_index TYPE i,
+          wa_cust      TYPE ty_cust.
+
+    lv_row_index = e_row.
+
+    READ TABLE it_cust INTO wa_cust INDEX lv_row_index.
+    IF sy-subrc = 0.
+      PERFORM call_smartform USING wa_cust.
+    ELSE.
+      MESSAGE 'No data found for the selected row.' TYPE 'E'.
+    ENDIF.
+  ENDMETHOD.
+
+
 ENDCLASS.
 
 DATA : event_handler TYPE REF TO handle_events.
@@ -135,6 +156,7 @@ MODULE status_0100 OUTPUT.
   CREATE OBJECT event_handler.
   SET HANDLER event_handler->handle_toolbar FOR grid.
   SET HANDLER event_handler->handler_usercommand FOR grid.
+  SET HANDLER event_handler->handle_doubleclick FOR grid.
 
   PERFORM fld_cat.
   PERFORM display_data.
@@ -151,14 +173,12 @@ MODULE user_command_0100 INPUT.
     WHEN 'BACK' OR 'CANCEL' OR 'EXIT' .
       SET SCREEN 0.
     WHEN 'SAVE'.
-      " Ensure ALV data is updated
       CALL METHOD grid->check_changed_data.
 
       DATA: wa_stravelag TYPE stravelag,
             wa_scustom   TYPE scustom.
 
 
-      " Update database table STRAVELAG
       LOOP AT it_cust INTO wa_cust.
         CLEAR: wa_stravelag .
         wa_stravelag-agencynum = wa_cust-agencynum.
@@ -168,7 +188,6 @@ MODULE user_command_0100 INPUT.
         MODIFY stravelag FROM wa_stravelag.
       ENDLOOP.
 
-      " Update database table SCUSTOM
       LOOP AT it_cust INTO wa_cust.
         CLEAR: wa_scustom.
         wa_scustom-id = wa_cust-id.
@@ -304,24 +323,20 @@ FORM insert_data .
 
   DATA: lv_index TYPE i.
 
-  " Get selected row index
   CALL METHOD grid->get_selected_rows
     IMPORTING
       et_index_rows = DATA(lt_selected_rows).
 
-  " Default to first row if no selection
   READ TABLE lt_selected_rows INTO DATA(ls_selected_row) INDEX 1.
   IF sy-subrc = 0.
     lv_index = ls_selected_row-index.
   ELSE.
-    lv_index = lines( it_cust ) + 1. " Append at the end if no row is selected
+    lv_index = lines( it_cust ) + 1.
   ENDIF.
 
-  " Insert a blank row at the selected position
   CLEAR wa_cust.
   INSERT wa_cust INTO it_cust INDEX lv_index + 1.
 
-  " Refresh ALV
   CALL METHOD grid->refresh_table_display.
 
 ENDFORM.
@@ -335,5 +350,64 @@ ENDFORM.
 *& <--  p2        text
 *&---------------------------------------------------------------------*
 FORM delete_data .
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*& Form call_smartform
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> WA_CUST
+*&---------------------------------------------------------------------*
+FORM call_smartform  USING  wa_cust TYPE ty_cust.
+
+
+  CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+    EXPORTING
+      formname = 'Z_SFFLIGHT_01'
+*     VARIANT  = ' '
+*     DIRECT_CALL              = ' '
+    IMPORTING
+      fm_name  = fm_name
+* EXCEPTIONS
+*     NO_FORM  = 1
+*     NO_FUNCTION_MODULE       = 2
+*     OTHERS   = 3
+    .
+
+  control_parameters-preview    = 'X'.
+  control_parameters-no_dialog  = 'X'.
+
+  output_options-tddest = 'LP01'.
+
+  CALL FUNCTION '/1BCDWB/SF00000100'
+    EXPORTING
+*     ARCHIVE_INDEX      =
+*     ARCHIVE_INDEX_TAB  =
+*     ARCHIVE_PARAMETERS =
+      control_parameters = control_parameters
+*     MAIL_APPL_OBJ      =
+*     MAIL_RECIPIENT     =
+*     MAIL_SENDER        =
+      output_options     = output_options
+      user_settings      = 'X'
+      p_num              = wa_cust-agencynum
+*   IMPORTING
+*     DOCUMENT_OUTPUT_INFO       =
+*     JOB_OUTPUT_INFO    =
+*     JOB_OUTPUT_OPTIONS =
+*   EXCEPTIONS
+*     FORMATTING_ERROR   = 1
+*     INTERNAL_ERROR     = 2
+*     SEND_ERROR         = 3
+*     USER_CANCELED      = 4
+*     OTHERS             = 5
+    .
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+
 
 ENDFORM.
